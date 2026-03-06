@@ -195,3 +195,177 @@ capture how a company performs vs its peers.
 findings:
 
 
+## Section 3 — Missing Values: Findings
+
+### 3.1 Overview
+
+Only 3 columns have missing values:
+
+| Column | Missing | % | Type |
+|--------|---------|---|------|
+| `province` | 919 | 7.77% | Random (MCAR) |
+| `roe` | 45 | 0.38% | Structural |
+| `leverage` | 45 | 0.38% | Structural |
+
+The dataset is **exceptionally clean** — no balance sheet or income statement
+items are missing.
+
+---
+
+### 3.2 ROE & Leverage — Structural Missingness (100% signal for class D)
+
+All 45 null `roe` and `leverage` rows belong to the **exact same observations**
+and all have **negative shareholders equity**.
+
+When equity is negative:
+- `roe = net_profit / equity` → mathematically valid but financially meaningless
+- `leverage = total_debt / equity` → negative leverage is uninterpretable
+
+The dataset correctly marks these as `NaN` rather than showing a misleading value.
+
+**Critical finding: 100% of rows where ROE is null are class D.**
+
+This means null `roe`/`leverage` is not a data quality issue —
+it is the **strongest possible signal of distress** in the entire dataset.
+
+→ **Do NOT impute these with median.** Instead:
+1. Create `roe_is_null` binary feature (= 1 when equity is negative)
+2. Impute the raw value with an **extreme negative sentinel** (e.g. `-99`)
+   to preserve the distress signal for tree-based models
+3. For linear models, impute with a value well below the 1st percentile
+
+---
+
+### 3.3 Negative Equity Deep Dive
+
+Negative equity is **exclusive to class D** — zero cases in A, B, or C.
+However it only covers **4.3% of all D rows** (45 / 1,058).
+
+| Finding | Implication |
+|---|---|
+| Negative equity never appears in A/B/C | `roe_is_null` is a **perfect precision** signal — when it fires, it is always D |
+| Only 4.3% of D rows have negative equity | `roe_is_null` has **very low recall** — catches only a small fraction of distressed companies |
+
+This means negative equity is a **late-stage distress indicator** — the company
+is already deep in trouble. The model must detect D much earlier using
+deterioration signals from other features (leverage trend, ROI decline,
+liquidity squeeze) before equity turns negative.
+
+→ `roe_is_null` is a **high-precision, low-recall** feature. Keep it — it will
+likely become a top split in tree-based models for class D. The bulk of D
+detection must come from financial ratio trends.
+
+---
+
+### 3.4 Province — Missing Completely at Random (MCAR)
+
+Province missingness rate is **uniform across all classes** (~7.2–7.9%):
+
+| Class | Province missing % |
+|-------|--------------------|
+| A | 7.2% |
+| B | 7.9% |
+| C | 7.5% |
+| D | 7.9% |
+
+No correlation with class, sector, or fiscal year (stable ~229 missing per year).
+This is **Missing Completely at Random (MCAR)** — likely companies that registered
+without a province code in the source database.
+
+→ **Impute with a new category `"UNKNOWN"`** — do not drop rows or use
+mode imputation, as province is a categorical with 107 levels and the
+missing pattern carries no financial signal.
+
+---
+
+### 3.5 Missingness is Stable Across Years
+
+No year concentration — ~11–12 null `roe`/`leverage` and ~229 null `province`
+per year consistently. No COVID-related reporting gaps detected.
+
+---
+
+### Preprocessing Decisions from Section 3
+
+| Column | Treatment | Rationale |
+|--------|-----------|-----------|
+| `roe`, `leverage` | Add `roe_is_null` binary flag → impute with sentinel `-99` | Perfect D signal, must preserve |
+| `province` | Impute with `"UNKNOWN"` category | MCAR, no financial signal |
+| All other columns | No imputation needed | Dataset is complete |
+
+### 4. Descriptive Statistics
+- Summary stats for all numerical columns
+- Log-scale histograms for balance sheet items (heavy right skew expected)
+- Check impossible values: negative revenue, `debt_to_assets > 1`
+
+
+→ These are legitimate extreme distress observations — do not drop them.
+→ Winsorize `leverage` at 99th percentile but preserve the `roe_is_null` flag.
+
+---
+
+### 4.5 Critical Finding: Dataset is Synthetically Generated
+
+findings:
+
+#### Evidence
+
+Ratio recomputation tests confirm perfect internal consistency:
+
+| Test | Max error | Verdict |
+|---|---|---|
+| ROE recomputation | 5e-05 (float rounding) | ✅ Perfect |
+| DTA recomputation | 5e-05 (float rounding) | ✅ Perfect |
+| Profit margin recomputation | 5e-05 (float rounding) | ✅ Perfect |
+| Accounting identity gap | Exactly 0 | ✅ Perfect |
+
+**A perfect accounting identity gap of 0 across 11,828 rows is impossible
+in real financial filing data.** Real statements always contain rounding
+differences between filed totals. This is the clearest proof of synthetic
+generation.
+
+#### Scale Investigation
+
+Attempting to recover a uniform scale factor:
+
+| Reference | Implied scale vs typical Italian SRL |
+|---|---|
+| Revenue-based | ~161x |
+| Asset-based | ~261x |
+
+The **inconsistency rules out uniform scaling**. The generator did not
+simply multiply real values by a constant. Instead it sampled absolute
+values from a large-cap size distribution while calibrating financial
+ratios to realistic SME dynamics.
+
+The operating cost ratio (median 92.4%, range 58.5%–113.4%) confirms
+the ratio dynamics are realistic and match real Italian sector economics.
+
+#### Implications for Modeling
+
+| Feature type | Reliability | Modeling decision |
+|---|---|---|
+| Financial ratios (`roe`, `roi`, etc.) | ✅ Fully reliable | Primary feature set |
+| Ratio trends (YoY changes) | ✅ Fully reliable | Engineer as lag features |
+| Operating cost ratio | ✅ Realistic | Use as engineered feature |
+| Absolute monetary values | ⚠️ Unrealistic size | Log-transform, use as relative proxy only |
+| Size-based benchmarks | ❌ Avoid | Cannot compare to real companies |
+
+→ **Ratios and their trends are the primary feature set.**
+→ Absolute values kept only as **relative size proxies** via log transformation.
+→ Synthetic nature acknowledged as a **limitation** in the final presentation.
+
+---
+
+### Preprocessing Decisions from Section 4
+
+| Variable | Treatment | Rationale |
+|---|---|---|
+| Balance sheet & income statement | `np.log1p` transform | Correct right skew for linear/distance models |
+| `shareholders_equity` | `np.log1p` on positive values only + flag negatives | Bimodal distribution |
+| `roe` | Winsorize at 1st/99th percentile | Extreme left outliers (-39.2) |
+| `leverage` | Winsorize at 99th percentile | 5 extreme outliers (max 101) |
+| `roi`, `current_ratio`, `quick_ratio` | No transformation | Clean bounded distributions |
+| `debt_to_assets`, `profit_margin` | No transformation | Already bounded ranges |
+| Extreme distress rows (45 rows) | Keep | Legitimate class D signal |
+
