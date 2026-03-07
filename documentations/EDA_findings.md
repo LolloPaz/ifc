@@ -369,3 +369,97 @@ the ratio dynamics are realistic and match real Italian sector economics.
 | `debt_to_assets`, `profit_margin` | No transformation | Already bounded ranges |
 | Extreme distress rows (45 rows) | Keep | Legitimate class D signal |
 
+### 6 
+All 6 features are perfectly monotone. This is the best possible outcome.
+
+Profitability features — strongest discriminators:
+
+roe drops from 0.270 → -0.105: the jump from C to D is a cliff, not a step. Class D is not just "less profitable" — it's loss-making at the median.
+roi decays smoothly 0.158 → 0.007: even class D companies generate marginally positive operating income at the median, meaning the distress signal in D comes more from the balance sheet than the P&L.
+profit_margin mirrors roe — goes negative at D (−0.015). Consistent with a company where costs exceed revenue.
+
+Balance sheet features — clean structural gradient:
+
+debt_to_assets rises 0.474 → 0.851: class D is almost entirely debt-financed. At 0.851, shareholders' equity covers less than 15% of assets — one bad year away from negative equity.
+leverage explodes 0.901 → 5.517: the jump from C (2.692) to D (5.517) is the sharpest step in the entire table. This is where the roe_is_null (negative equity) cases start pulling the median up.
+current_ratio decreases 2.482 → 1.364: class D still has a ratio above 1, meaning liquidity is not the primary failure mode — solvency is. This matters for modeling: don't over-weight short-term liquidity features.
+
+
+Modeling decisions this produces:
+
+Ordinal encoding is fully justified — the gradient is real and consistent across all 6 features. We can use ordinal-aware losses or treat the problem as ordered classification.
+roe, leverage, and debt_to_assets are the three strongest raw discriminators — they will dominate feature importance. Engineering their year-over-year trends is the highest-priority feature engineering task.
+The C→D boundary is the hardest to learn from liquidity alone — current_ratio barely moves between C and D (1.461 vs 1.364). The model will need balance sheet deterioration trends, not just snapshots, to catch companies transitioning into D.
+profit_margin and roi are correlated — both measure profitability. Worth checking in §7 whether they're redundant enough to drop one.
+
+
+# §7 Findings — Correlation Analysis
+The results are more severe than anticipated. There are two distinct collinearity problems that need separate treatment.
+
+Problem 1: The absolute monetary variables are one giant collinearity cluster
+Every balance sheet and income statement variable — total_fixed_assets, current_assets, shareholders_equity, total_debt, short_term_debt, long_term_debt, production_value, production_costs — correlates with every other at r ≥ 0.85, many at r ≥ 0.96. This is not a coincidence — they all measure the same thing: firm size. A bigger company has more assets, more debt, more revenue, more costs. There is essentially one latent factor here.
+Decision: drop all 8 raw absolute variables from the feature set entirely. They carry no class signal beyond what the ratios already capture (confirmed by §6 — ratios showed perfect monotonicity, raw absolutes weren't even in that analysis). Keep only log(total_assets) as a single size proxy, log-transformed as decided in §4.
+
+Problem 2: Three ratio pairs are perfectly redundant by construction
+
+production_costs ↔ production_value r=+1.000 — same variable scaled
+quick_ratio ↔ current_ratio r=+1.000 — in this dataset inventory is negligible, making them identical
+debt_to_assets ↔ leverage r=+1.000 — two encodings of the same solvency concept
+
+Decision: drop production_costs, quick_ratio, and leverage. Keep production_value (or derive operating_cost_ratio from it), current_ratio, and debt_to_assets.
+
+Problem 3: roi ↔ roe r=+0.962 — near-redundant profitability pair
+From §6 both showed monotone decreasing gradients. From §7 they are almost the same feature. However they are not identical — roi uses total assets as denominator (operational efficiency), roe uses equity (shareholder return). For class D companies with negative equity, roe breaks down while roi remains interpretable.
+Decision: keep roi, drop roe as a raw feature. The roe_is_null binary flag (engineered in §3) already captures the unique information roe carries for class D.
+
+Clean feature set entering feature engineering
+KeepDropReasonlog(total_assets)all other absolutessize proxy onlyroiroeredundant with roi, roe_is_null flag keptcurrent_ratioquick_ratior=1.00debt_to_assetsleverager=1.00profit_marginproduction_costsr=1.00 with production_valueproduction_value (log)—size-relative revenueyears_in_business—independent, no collinearity
+net_profit_loss and operating_income also correlate heavily with the size cluster — drop both, they are already encoded in roi and profit_margin.
+
+
+### §8 Findings — Panel Completeness
+
+96.5% of companies have a full 4-year history. Lag features are safe to engineer at scale. Only 104 companies (3.5%) have incomplete panels — this is a negligible edge case, not a structural problem.
+
+The 25.4% NaN rate for lag features needs careful reading.
+2,999 rows will have NaN lag features — one per company (their first observed year, where no t-1 exists). This is not a problem with the data, it's a mechanical consequence of the panel structure. Every company loses exactly one row to NaN lags regardless of how many years it has. The imputation strategy for these rows is: sector-year median, fit on training data only.
+
+Early exits are a distress signal, late entrants are not.
+
+67 early exits (stopped filing before 2021) — from §1 findings we know these skew heavily toward class D
+38 late entrants (entered after 2018) — neutral, just young companies
+The right chart confirms this: 39.1% of incomplete companies are class D, versus only 8.9% in the full dataset. Class D is 4.4x overrepresented among companies that disappeared from the panel.
+
+This validates the is_last_observation binary flag engineered in §1 — it is capturing real distress, not noise.
+
+Modeling decisions this produces:
+
+Lag features are greenlit — 96.5% coverage means NaN imputation affects a small, well-understood minority of rows. No need for fallback architectures.
+Impute NaN lags with sector-year median, fit on train only. Do not use global median — sector context matters (a construction company's median ROI differs from an IT company's).
+n_years_in_panel and is_last_observation are confirmed features — the class D overrepresentation among incomplete companies proves these carry real predictive signal.
+Do not drop incomplete companies — their 39.1% D rate makes them some of the most informative rows in the dataset for detecting distress. Dropping them would hurt recall on the hardest class to predict.
+
+
+
+## §9 Findings — Sector & Geography
+
+No rare sectors exist — cardinality strategy changes
+Every ATECO sector has ≥50 observations. The planned "OTHER" grouping is not needed. Keep all sectors at full granularity — no cardinality reduction required.
+
+Sector D-rate spread is narrow — weaker signal than expected
+The D-rate ranges only from 6.4% (sector 62, IT) to 10.5% (sector 10, Food Manufacturing) — a spread of just 4 percentage points across the top 10 sectors. Compare this to §2's finding that class B dominates at 59% everywhere: sector shifts the D-rate by ±2% around the baseline, not by 10–15% as we hoped.
+This is a significant downgrade from the §2 hypothesis. Sector is a weaker standalone discriminator than anticipated. It will not be a top feature by importance.
+However the ROI/ROE medians tell a different story — sector 56 (Food & Beverage service) has median ROI of 0.189 vs sector 71 (Professional services) at 0.086. That's a 2x difference in profitability baseline across sectors. This is exactly why sector-relative ratios matter: a company in sector 71 with ROI=0.10 is performing well above its peers, while the same ROI=0.10 in sector 56 signals underperformance.
+The sector signal lives in the residuals, not in the raw sector label. sector_roi_delta = roi - sector_median_roi and sector_roe_delta = roe - sector_median_roe will capture this — the raw ateco_sector label alone will not.
+
+years_in_business is flat — confirmed dead feature
+Median years in business: A=36, B=34, C=36, D=37. The boxes in the plot are virtually identical across all four classes. There is no age effect whatsoever — company age does not predict financial health in this dataset.
+This contradicts the §8 hypothesis that older companies fail more due to survivorship. The reality is that the distribution is simply uniform — companies of all ages appear in all classes.
+Decision: drop years_in_business from the feature set entirely. It carries no signal and will only add noise.
+
+Modeling decisions this produces
+
+Drop years_in_business — confirmed zero predictive power, flat across all classes
+Keep ateco_sector at full granularity — no rare sectors to collapse
+Engineer sector_roi_delta and sector_roe_delta — the real sector signal is in peer-relative performance, not the sector label itself. These are now the highest-priority engineered features from this section
+Downgrade sector importance expectations — the raw ateco_sector one-hot will likely rank low in feature importance. Don't over-engineer sector interactions
