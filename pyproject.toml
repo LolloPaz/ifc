@@ -1,4 +1,4 @@
-0   [project]
+[project]
 name = "ifc"
 version = "0.1.0"
 description = "Add your description here"
