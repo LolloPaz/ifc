@@ -3,6 +3,7 @@ from pathlib import Path
 #Paths 
 ROOT = Path(__file__).parents[2]
 DATA_DIR = ROOT / "data" / "processed"
+OUTPUT_PATH = ROOT / "figure"
 TRAIN_FILE = DATA_DIR / "train_data.csv"
 TEST_FILE = DATA_DIR / "test_features.csv"
 NOTEBOOKS_DIR = ROOT / "notebooks"
