@@ -20,6 +20,7 @@ def test_data():
     assert file_path.exists(), f"File not found: {file_path}"
     return pd.read_csv(file_path, nrows=100)
 
+
 def test_data_is_not_empty(train_data, test_data):
     """Test that the loaded datasets actually contain data."""
     assert len(train_data) > 0, "Training dataset is completely empty."
@@ -51,6 +52,7 @@ def test_fiscal_year_ranges(train_data, test_data):
     assert not invalid_test_years, \
         f"Data leakage or error: Found unexpected years in test data: {invalid_test_years}"
 
+
 def test_target_column_exists_in_train(train_data):
     """Test that the required target for Task 2 exists in the training set."""
     target_col = 'financial_health_class'
@@ -76,6 +78,7 @@ def test_feature_columns_match(train_data, test_data):
     assert not missing_in_test, f"Test data is missing features: {missing_in_test}"
     assert not extra_in_test, f"Test data has unexpected extra features: {extra_in_test}"
 
+
 def test_company_id_is_unique(train_data, test_data):
     """Test that 'company_id' combined with 'fiscal_year' creates a unique row."""
     # Assuming the dataset is a panel (company over different years)
@@ -84,6 +87,7 @@ def test_company_id_is_unique(train_data, test_data):
     
     assert train_duplicates == 0, f"Found {train_duplicates} duplicate company/year pairs in train data."
     assert test_duplicates == 0, f"Found {test_duplicates} duplicate company/year pairs in test data."
+
 
 def test_target_has_valid_classes(train_data):
     """Test that the multiclass target only contains expected values."""
