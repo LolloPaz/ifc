@@ -21,3 +21,8 @@ data/
 
 
 figures/*
+
+*.png
+*.jpg
+*.jpeg
+notebooks/*.png
