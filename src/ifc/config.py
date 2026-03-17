@@ -3,12 +3,11 @@ from pathlib import Path
 #Paths 
 ROOT = Path(__file__).parents[2]
 DATA_DIR = ROOT / "data" / "processed"
-OUTPUT_PATH = ROOT / "figure"
+OUTPUT_PATH = ROOT / "figures"
 TRAIN_FILE = DATA_DIR / "train_data.csv"
 TEST_FILE = DATA_DIR / "test_features.csv"
 NOTEBOOKS_DIR = ROOT / "notebooks"
-FIGURES_DIR = NOTEBOOKS_DIR / "figures"
-OUTPUT_PATH = FIGURES_DIR  # alias per compatibilità
+
 
 #Challenge 2: Financial Health Classification
 TARGET = "financial_health_class"
