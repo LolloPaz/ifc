@@ -27,3 +27,6 @@ figures/*
 *.jpeg
 notebooks/*.pngfigures/
 *.png
+
+notebooks/
+analysis_output/*
