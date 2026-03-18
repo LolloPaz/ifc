@@ -25,4 +25,5 @@ figures/*
 *.png
 *.jpg
 *.jpeg
-notebooks/*.png
+notebooks/*.pngfigures/
+*.png
