@@ -9,6 +9,7 @@ dependencies = [
     "ipykernel>=6.29.0",
     "jupyterlab>=4.1.0",
     "kaleido>=1.2.0",
+    "lifelines>=0.30.3",
     "lightgbm>=4.3.0",
     "matplotlib>=3.8.0",
     "nbdime>=4.0.4",
