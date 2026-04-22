@@ -5,6 +5,7 @@ description = "Task 2 Challenge - Financial Health Prediction"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "arrowspace>=0.25.14",
     "imbalanced-learn>=0.12.0",
     "ipykernel>=6.29.0",
     "jupyterlab>=4.1.0",

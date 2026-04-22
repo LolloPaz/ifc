@@ -95,6 +95,19 @@ wheels = [
 ]
 
 [[package]]
+name = "arrowspace"
+version = "0.25.14"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/94/294796cc2250a5c1eca6aac13d4c67c62e2dcfc8fc686d661f543843f530/arrowspace-0.25.14.tar.gz", hash = "sha256:72f27fb024f37f959023be4d55942346c4d6c6dad6e510cf43f08b5de70fa3ce", size = 110351, upload-time = "2026-02-11T16:38:19.276Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/31/458aac80e06decd90b4636d9e81434e0c5be7699fcdc6e443aaab585a61c/arrowspace-0.25.14-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:3a3eda1e04c04531d3c12086a1d149821032575210275e3050e1218527c13a37", size = 5168821, upload-time = "2026-02-11T16:58:19.732Z" },
+    { url = "https://files.pythonhosted.org/packages/79/bb/4088dc4590b0df788c3a7857a877c42eb2ebbf4675b29b313b60b19d093b/arrowspace-0.25.14-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:8d555813137b027b938368700d57069835d07d65bf1ca4389fea14e093be62cf", size = 4881903, upload-time = "2026-02-11T16:58:21.292Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/d8/0ad47f64f157df3599c33894ace152c20c938379f191751f83a605b14f3c/arrowspace-0.25.14-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:da904596d77180e2e7f55baf64afdfbb49d549848eab0e954337465f45f49900", size = 5389887, upload-time = "2026-02-11T16:58:23.207Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/04/5c04dfcbcbb6c5a2f1d58f0ef00481777d8dadd0d0d507226180244fb0f0/arrowspace-0.25.14-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad6edba6562eb792fc1cbc57b663dccd962025e3bf6ad7a20bb15996ba6dfd9f", size = 5555779, upload-time = "2026-02-11T16:58:24.891Z" },
+    { url = "https://files.pythonhosted.org/packages/32/34/51cd967d8626f24ff01f63b066736fd591f1d70a43bec7016ca6a5acc9ff/arrowspace-0.25.14-cp312-cp312-manylinux_2_34_x86_64.whl", hash = "sha256:50aae204d0a8e2316b6bb7f9b68a62a7d825e761951035d330feb595228af170", size = 4886005, upload-time = "2026-02-11T16:38:16.798Z" },
+]
+
+[[package]]
 name = "asttokens"
 version = "3.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -620,6 +633,7 @@ name = "ifc"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "arrowspace" },
     { name = "imbalanced-learn" },
     { name = "ipykernel" },
     { name = "jupyterlab" },
@@ -641,6 +655,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "arrowspace", specifier = ">=0.25.14" },
     { name = "imbalanced-learn", specifier = ">=0.12.0" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "jupyterlab", specifier = ">=4.1.0" },
