@@ -14,6 +14,7 @@ dependencies = [
     "lightgbm>=4.3.0",
     "matplotlib>=3.8.0",
     "nbdime>=4.0.4",
+    "networkx>=3.6.1",
     "numpy>=1.26.0",
     "pandas>=2.2.0",
     "plotly>=5.20.0",
@@ -22,6 +23,7 @@ dependencies = [
     "seaborn>=0.13.0",
     "shap>=0.45.0",
     "tabulate>=0.10.0",
+    "umap-learn>=0.5.12",
     "xgboost>=2.0.0",
 ]
 
