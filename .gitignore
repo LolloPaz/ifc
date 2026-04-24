@@ -30,3 +30,5 @@ figures/*.png
 
 notebooks/
 analysis_output/*
+
+pptx.md
